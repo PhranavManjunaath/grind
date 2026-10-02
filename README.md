@@ -205,7 +205,8 @@ beyond manual code review.
 Backend env vars (`backend/.env`, see `backend/.env.example`):
 
 - `DATABASE_URL` — SQLite URL, defaults to `sqlite:///./grind.db`
-- `CORS_ORIGINS` — comma-separated list of allowed frontend origins
+- `CORS_ORIGINS` — comma-separated list of allowed frontend origins, or `*`
+  to accept any origin (credentials are then disabled automatically)
 - `AI_API_KEY` — optional; enables the AI Coach. Without it, the app
   still works, just without AI recommendations.
 - `AI_MODEL` — optional, defaults to `claude-haiku-4-5-20251001`
@@ -222,13 +223,38 @@ Vercel only hosts the static frontend; the API needs its own host.
 
 1. **Database**: create a free Supabase project, then copy the Postgres
    connection string (Project Settings → Database → Connection string, URI).
-   Tables are created automatically on first start.
+   Keep the `?sslmode=require` query parameter — Supabase rejects
+   plaintext connections. Tables are created automatically on first start.
 2. **API**: on [Render](https://render.com) choose New → Blueprint, pick this
    repo (it reads `render.yaml`), and paste the connection string as
    `DATABASE_URL`. Optionally set `AI_API_KEY` (a real `sk-ant-...` key).
 3. **Frontend**: in Vercel → Project Settings → Environment Variables, set
    `VITE_API_URL` to the Render service URL (no trailing slash) and redeploy.
 
-`DATABASE_URL` accepts `postgres://`, `postgresql://`, or `sqlite:///...`.
+`DATABASE_URL` accepts `postgres://`, `postgresql://`, or `sqlite:///...`;
+the first two are normalised to the `psycopg` driver.
 Render's free web service sleeps when idle, so the first request after a
 pause takes ~30s.
+
+### Schema changes
+
+Startup uses `create_all`, which creates missing tables but never alters or
+drops existing ones. If you change a model in `backend/app/models.py`, apply
+the difference to the hosted database yourself (e.g. `ALTER TABLE` in the
+Supabase SQL editor) — a redeploy will not do it for you.
+
+### Moving existing data to Postgres
+
+Switching `DATABASE_URL` points the API at a different, initially empty
+database; your local `backend/grind.db` is not migrated. To carry data over,
+either re-enter it through the UI, or dump and restore it:
+
+```sh
+sqlite3 backend/grind.db .dump | \
+  sed 's/^CREATE TABLE/CREATE TABLE IF NOT EXISTS/' | \
+  psql "$DATABASE_URL"
+```
+
+Verify row counts per table afterwards — the column order and types line up,
+but the `INTEGER PRIMARY KEY`/`SERIAL` handling differs between the two.
+

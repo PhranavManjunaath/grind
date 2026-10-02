@@ -16,6 +16,12 @@ class Settings:
         if origin.strip()
     ]
 
+    @property
+    def allow_all_origins(self) -> bool:
+        # A bare "*" means "any origin". The CORS spec forbids combining a
+        # wildcard with credentials, so main.py turns credentials off then.
+        return "*" in self.cors_origins
+
 
 @lru_cache
 def get_settings() -> Settings:

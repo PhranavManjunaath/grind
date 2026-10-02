@@ -11,7 +11,9 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.7
       - key: CORS_ORIGINS
-        value: https://grind-rose.vercel.app
+        # "*" accepts any origin (no auth/cookies on this API). Replace with a
+        # comma-separated list to lock it down, e.g. https://grind-rose.vercel.app
+        value: "*"
       - key: DATABASE_URL
         sync: false   # paste your Supabase Postgres connection string
       - key: AI_API_KEY
