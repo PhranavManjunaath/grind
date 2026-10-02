@@ -215,3 +215,20 @@ Frontend env vars (`.env`, see `.env.example`):
 - `VITE_API_URL` — backend base URL, defaults to `http://localhost:8000`
 
 No secrets or deployment credentials are hard-coded anywhere in the repo.
+
+## Deploying the backend (so the live site works)
+
+Vercel only hosts the static frontend; the API needs its own host.
+
+1. **Database**: create a free Supabase project, then copy the Postgres
+   connection string (Project Settings → Database → Connection string, URI).
+   Tables are created automatically on first start.
+2. **API**: on [Render](https://render.com) choose New → Blueprint, pick this
+   repo (it reads `render.yaml`), and paste the connection string as
+   `DATABASE_URL`. Optionally set `AI_API_KEY` (a real `sk-ant-...` key).
+3. **Frontend**: in Vercel → Project Settings → Environment Variables, set
+   `VITE_API_URL` to the Render service URL (no trailing slash) and redeploy.
+
+`DATABASE_URL` accepts `postgres://`, `postgresql://`, or `sqlite:///...`.
+Render's free web service sleeps when idle, so the first request after a
+pause takes ~30s.
