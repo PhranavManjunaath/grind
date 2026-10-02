@@ -1,17 +1,29 @@
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .database import init_db
+from .database import check_database, describe_target, init_db
 from .routers import analytics, food, skills, workouts
 from .routers import settings as settings_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    logger.info("Startup: DATABASE_URL resolves to %s", describe_target())
+    try:
+        init_db()
+    except Exception:
+        # Deliberately not re-raised: the process stays up so that the reason
+        # is visible in the deploy logs and /api/health can report it, instead
+        # of the container crash-looping with no readable output.
+        logger.exception("init_db() failed - tables missing or DB unreachable")
+    else:
+        logger.info("init_db() succeeded; schema is ready")
     yield
 
 
@@ -45,5 +57,14 @@ app.include_router(settings_router.router)
 
 
 @app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health(response: Response) -> dict[str, str]:
+    """Liveness plus a real database round-trip.
+
+    Returns 503 when the database is unreachable so the platform surfaces an
+    unhealthy service rather than a green one that serves errors.
+    """
+    ok, detail = check_database()
+    if not ok:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "degraded", "database": detail}
+    return {"status": "ok", "database": detail}

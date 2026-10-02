@@ -1,8 +1,14 @@
-fastapi>=0.115,<1.0
-uvicorn[standard]>=0.30,<1.0
-sqlmodel>=0.0.22,<1.0
-pydantic>=2.8,<3.0
-python-dotenv>=1.0,<2.0
-pytest>=8.0,<9.0
-httpx>=0.27,<1.0
-psycopg[binary]>=3.2,<4.0
+# Pinned to the versions verified against Python 3.12 (Render's PYTHON_VERSION).
+# Unpinned ranges let pip re-resolve per environment, which is how a locally
+# working backend breaks only in production.
+fastapi==0.142.2
+starlette==1.7.0
+uvicorn[standard]==0.54.0
+sqlmodel==0.0.47
+SQLAlchemy==2.0.54
+pydantic==2.13.5
+pydantic-core==2.46.5
+python-dotenv==1.2.4
+pytest==8.4.2
+httpx==0.28.1
+psycopg[binary]==3.3.6
