@@ -1,4 +1,4 @@
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function ProgressChart({ data, title = 'Habit Progress' }) {
   return (
@@ -7,29 +7,22 @@ export default function ProgressChart({ data, title = 'Habit Progress' }) {
         <h2 className="text-sm font-semibold text-text tracking-wide">{title}</h2>
         <span className="text-[10px] uppercase tracking-wider text-text-dim">Daily completion %</span>
       </div>
-      <div className="h-[180px]">
+      <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 16, right: 4, left: -24, bottom: 0 }}>
             <defs>
               <linearGradient id="progressFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#2dd4bf" stopOpacity={0} />
+                <stop offset="0%" stopColor="#2dd4bf" stopOpacity={0.85} />
+                <stop offset="45%" stopColor="#14b8a6" stopOpacity={0.55} />
+                <stop offset="100%" stopColor="#0f766e" stopOpacity={0.12} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e2445" vertical={false} />
             <XAxis
               dataKey="day"
               tick={{ fontSize: 10, fill: '#5c6188' }}
-              axisLine={{ stroke: '#1e2445' }}
-              tickLine={false}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={{ fontSize: 10, fill: '#5c6188' }}
               axisLine={false}
               tickLine={false}
-              width={32}
+              interval="preserveStartEnd"
             />
             <Tooltip
               contentStyle={{
@@ -46,8 +39,10 @@ export default function ProgressChart({ data, title = 'Habit Progress' }) {
               type="monotone"
               dataKey="percent"
               stroke="#2dd4bf"
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill="url(#progressFill)"
+              dot={{ r: 2.5, fill: '#2dd4bf', strokeWidth: 0 }}
+              activeDot={{ r: 4.5, fill: '#2dd4bf', stroke: '#080b20', strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>
