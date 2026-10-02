@@ -142,3 +142,43 @@ export function colorForPercent(percent) {
   if (percent >= 50) return 'var(--color-mid)';
   return 'var(--color-low)';
 }
+
+// ---- Arbitrary date-range helpers (used by the unified Analytics page) ----
+// These are additive and don't change the month-based functions above,
+// which the existing Habit Tracker dashboard keeps using unchanged.
+
+function dateRangeKeys(startStr, endStr) {
+  const keys = [];
+  const start = new Date(startStr + 'T00:00:00');
+  const end = new Date(endStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    if (d > today) break;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    keys.push(`${y}-${m}-${day}`);
+  }
+  return keys;
+}
+
+export function habitRangeCompletion(habits, startStr, endStr) {
+  const dateKeys = dateRangeKeys(startStr, endStr);
+  if (dateKeys.length === 0 || habits.length === 0) {
+    return { trackableDays: dateKeys.length, completed: 0, possible: 0, percent: 0 };
+  }
+  let completed = 0;
+  dateKeys.forEach((key) => {
+    habits.forEach((h) => {
+      if (h.completions[key]) completed++;
+    });
+  });
+  const possible = dateKeys.length * habits.length;
+  return {
+    trackableDays: dateKeys.length,
+    completed,
+    possible,
+    percent: possible === 0 ? 0 : Math.round((completed / possible) * 1000) / 10,
+  };
+}

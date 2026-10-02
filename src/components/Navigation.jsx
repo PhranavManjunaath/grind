@@ -1,8 +1,10 @@
-import { LayoutDashboard, ListChecks, BarChart3, Settings as SettingsIcon, Flame } from 'lucide-react';
+import { ListChecks, Dumbbell, Utensils, BookOpen, BarChart3, Settings as SettingsIcon, Flame } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'habits', label: 'Habits', icon: ListChecks },
+  { key: 'dashboard', label: 'Habit Tracker', icon: ListChecks },
+  { key: 'workout', label: 'Workout', icon: Dumbbell },
+  { key: 'food', label: 'Food', icon: Utensils },
+  { key: 'skills', label: 'Skills', icon: BookOpen },
   { key: 'analytics', label: 'Analytics', icon: BarChart3 },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },
 ];

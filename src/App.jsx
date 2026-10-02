@@ -10,6 +10,10 @@ import WeeklyProgress from './components/WeeklyProgress';
 import AddHabitModal from './components/AddHabitModal';
 import MentalStateChart from './components/MentalStateChart';
 import SettingsPage from './components/Settings';
+import WorkoutLog from './pages/WorkoutLog';
+import FoodLog from './pages/FoodLog';
+import SkillsLog from './pages/SkillsLog';
+import Analytics from './pages/Analytics';
 import { getAllDays } from './utils/dateUtils';
 import {
   overallStats,
@@ -179,6 +183,14 @@ export default function App() {
           onExport={() => exportData(data)}
           onImport={handleImport}
         />
+      ) : activeTab === 'workout' ? (
+        <WorkoutLog />
+      ) : activeTab === 'food' ? (
+        <FoodLog />
+      ) : activeTab === 'skills' ? (
+        <SkillsLog />
+      ) : activeTab === 'analytics' ? (
+        <Analytics />
       ) : (
         <div className="px-3 sm:px-6 pb-10">
           <Header year={year} month={month} onPrevMonth={goPrevMonth} onNextMonth={goNextMonth} stats={stats} />
