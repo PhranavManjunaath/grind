@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Trash2, Pencil, Check, X, Bookmark } from 'lucide-react';
+import { Trash2, Pencil, Check, X, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
 import { foodApi, ApiError } from '../api/client';
 import { panelClass, inputClass, labelClass, primaryButtonClass, iconButtonClass } from '../utils/ui';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+
+function shiftDay(dateStr, delta) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
 
 const MEAL_OPTIONS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
@@ -308,12 +314,29 @@ export default function FoodLog() {
       <div className={panelClass}>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="text-sm font-semibold text-text">Entries</h2>
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className={`${inputClass} w-36`}
-          />
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setFilterDate((d) => shiftDay(d, -1))}
+              className={iconButtonClass}
+              aria-label="Previous day"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              style={{ width: '9rem' }}
+              className={inputClass}
+            />
+            <button
+              onClick={() => setFilterDate((d) => shiftDay(d, 1))}
+              className={iconButtonClass}
+              aria-label="Next day"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
 
         {filterDate && entries.length > 0 && (
@@ -374,7 +397,8 @@ function EntryRow({ entry, onDelete, onChanged }) {
               min="0"
               value={calories}
               onChange={(e) => setCalories(e.target.value)}
-              className={`${inputClass} w-20 py-1`}
+              style={{ width: '5rem' }}
+              className={`${inputClass} py-1`}
             />
             <button onClick={save} disabled={saving} className={iconButtonClass} aria-label="Save calories">
               <Check size={13} />

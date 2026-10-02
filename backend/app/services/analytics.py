@@ -1,79 +1,84 @@
 from collections import defaultdict
-from datetime import date as date_type
 
-from ..models import ExerciseEntry, FoodEntry, SkillEntry, WorkoutSession
+from ..models import FoodEntry, SkillEntry, WorkoutExerciseEntry, WorkoutWeekLog
 from ..schemas import (
-    AnalyticsWeekSummary,
+    DailyFoodTotal,
     FoodWeekSummary,
     SkillWeekSummary,
     WorkoutWeekSummary,
 )
 from .nutrition import daily_totals
+from .overload import volume as exercise_volume
 
 
 def summarize_workouts(
-    sessions: list[WorkoutSession], exercises_by_session: dict[int, list[ExerciseEntry]]
+    week_logs: list[WorkoutWeekLog],
+    exercises_by_log: dict[int, list[WorkoutExerciseEntry]],
+    trend_by_exercise: dict[str, str],
 ) -> WorkoutWeekSummary:
     total_sets = 0
     exercise_names: set[str] = set()
     volume_by_exercise: dict[str, float] = defaultdict(float)
 
-    for session in sessions:
-        for exercise in exercises_by_session.get(session.id or -1, []):
+    for log in week_logs:
+        for exercise in exercises_by_log.get(log.id or -1, []):
             total_sets += exercise.sets
             exercise_names.add(exercise.exercise_name)
-            volume_by_exercise[exercise.exercise_name] += (
-                exercise.weight * exercise.reps * exercise.sets
-            )
+            volume_by_exercise[exercise.exercise_name] += exercise_volume(exercise)
+
+    improving = sorted(n for n in exercise_names if trend_by_exercise.get(n) == "improving")
+    stable = sorted(n for n in exercise_names if trend_by_exercise.get(n) == "stable")
+    declining = sorted(n for n in exercise_names if trend_by_exercise.get(n) == "declining")
 
     return WorkoutWeekSummary(
-        sessions_logged=len(sessions),
+        days_logged=len(week_logs),
         total_sets=total_sets,
         exercises_trained=sorted(exercise_names),
-        volume_by_exercise=dict(volume_by_exercise),
+        volume_by_exercise={k: round(v, 2) for k, v in volume_by_exercise.items()},
+        improving=improving,
+        stable=stable,
+        declining=declining,
     )
 
 
 def summarize_food(entries: list[FoodEntry]) -> FoodWeekSummary:
-    totals = daily_totals(entries)
+    totals: list[DailyFoodTotal] = daily_totals(entries)
     total_calories = round(sum(t.calories for t in totals), 2)
-    average = round(total_calories / len(totals), 2) if totals else None
+    days_logged = len(totals)
+
+    def avg(attr: str) -> float | None:
+        if not totals:
+            return None
+        return round(sum(getattr(t, attr) for t in totals) / days_logged, 2)
+
+    highest = max(totals, key=lambda t: t.calories) if totals else None
+    lowest = min(totals, key=lambda t: t.calories) if totals else None
+
     return FoodWeekSummary(
-        days_logged=len(totals),
+        days_logged=days_logged,
         total_calories=total_calories,
-        average_daily_calories=average,
+        average_daily_calories=avg("calories"),
+        average_protein=avg("protein"),
+        average_carbs=avg("carbs"),
+        average_fat=avg("fat"),
+        highest_calorie_day=highest,
+        lowest_calorie_day=lowest,
         daily_totals=totals,
     )
 
 
-def summarize_skills(entries: list[SkillEntry]) -> SkillWeekSummary:
-    total_minutes = round(sum(e.time_spent_minutes for e in entries), 2)
+def summarize_skills(
+    entries: list[SkillEntry], improved: set[str]
+) -> SkillWeekSummary:
+    total_hours = round(sum(e.hours_spent for e in entries), 2)
     average_confidence = (
         round(sum(e.confidence for e in entries) / len(entries), 2) if entries else None
     )
-    by_skill: dict[str, float] = defaultdict(float)
-    for e in entries:
-        by_skill[e.skill_name] += e.time_spent_minutes
+    skills_worked_on = sorted({e.skill_name for e in entries})
     return SkillWeekSummary(
         entries_logged=len(entries),
-        total_minutes=total_minutes,
+        skills_worked_on=skills_worked_on,
+        total_hours=total_hours,
         average_confidence=average_confidence,
-        by_skill={k: round(v, 2) for k, v in by_skill.items()},
-    )
-
-
-def build_week_summary(
-    range_start: date_type,
-    range_end: date_type,
-    sessions: list[WorkoutSession],
-    exercises_by_session: dict[int, list[ExerciseEntry]],
-    food_entries: list[FoodEntry],
-    skill_entries: list[SkillEntry],
-) -> AnalyticsWeekSummary:
-    return AnalyticsWeekSummary(
-        range_start=range_start,
-        range_end=range_end,
-        workouts=summarize_workouts(sessions, exercises_by_session),
-        food=summarize_food(food_entries),
-        skills=summarize_skills(skill_entries),
+        improved_confidence=sorted(improved),
     )

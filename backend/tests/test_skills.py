@@ -1,84 +1,73 @@
 def test_create_skill_entry(client):
     resp = client.post(
-        "/api/skills/entries",
+        "/api/skills",
         json={
-            "date": "2026-01-01",
-            "skill_name": "Guitar",
-            "time_spent_minutes": 30,
-            "confidence": 3,
+            "week_number": 1,
+            "skill_name": "FastAPI",
+            "hours_spent": 5,
+            "confidence": 7,
+            "progress": "Beginner -> Intermediate",
         },
     )
     assert resp.status_code == 201
 
 
-def test_reject_zero_time_spent(client):
+def test_reject_zero_hours(client):
     resp = client.post(
-        "/api/skills/entries",
-        json={
-            "date": "2026-01-01",
-            "skill_name": "Guitar",
-            "time_spent_minutes": 0,
-            "confidence": 3,
-        },
+        "/api/skills",
+        json={"week_number": 1, "skill_name": "Guitar", "hours_spent": 0, "confidence": 3},
     )
     assert resp.status_code == 422
 
 
 def test_reject_confidence_out_of_range(client):
     resp = client.post(
-        "/api/skills/entries",
-        json={
-            "date": "2026-01-01",
-            "skill_name": "Guitar",
-            "time_spent_minutes": 20,
-            "confidence": 6,
-        },
+        "/api/skills",
+        json={"week_number": 1, "skill_name": "Guitar", "hours_spent": 2, "confidence": 11},
     )
     assert resp.status_code == 422
 
 
-def test_filter_by_skill_name(client):
+def test_confidence_allows_full_1_to_10_range(client):
+    resp = client.post(
+        "/api/skills",
+        json={"week_number": 1, "skill_name": "Guitar", "hours_spent": 2, "confidence": 10},
+    )
+    assert resp.status_code == 201
+
+
+def test_filter_by_week_and_skill_name(client):
     client.post(
-        "/api/skills/entries",
-        json={
-            "date": "2026-01-01",
-            "skill_name": "Guitar",
-            "time_spent_minutes": 20,
-            "confidence": 3,
-        },
+        "/api/skills",
+        json={"week_number": 1, "skill_name": "Guitar", "hours_spent": 2, "confidence": 3},
     )
     client.post(
-        "/api/skills/entries",
-        json={
-            "date": "2026-01-01",
-            "skill_name": "Spanish",
-            "time_spent_minutes": 15,
-            "confidence": 2,
-        },
+        "/api/skills",
+        json={"week_number": 2, "skill_name": "Guitar", "hours_spent": 3, "confidence": 4},
     )
-    resp = client.get("/api/skills/entries", params={"skill_name": "Guitar"})
+    client.post(
+        "/api/skills",
+        json={"week_number": 1, "skill_name": "Spanish", "hours_spent": 1, "confidence": 2},
+    )
+
+    resp = client.get("/api/skills", params={"week_number": 1})
     body = resp.json()
-    assert body["total"] == 1
-    assert body["items"][0]["skill_name"] == "Guitar"
+    assert body["total"] == 2
+
+    resp = client.get("/api/skills", params={"skill_name": "Guitar"})
+    assert resp.json()["total"] == 2
 
 
 def test_update_and_delete_skill_entry(client):
     create = client.post(
-        "/api/skills/entries",
-        json={
-            "date": "2026-01-01",
-            "skill_name": "Chess",
-            "time_spent_minutes": 45,
-            "confidence": 4,
-        },
+        "/api/skills",
+        json={"week_number": 1, "skill_name": "Chess", "hours_spent": 1, "confidence": 4},
     )
     entry_id = create.json()["id"]
 
-    update = client.patch(
-        f"/api/skills/entries/{entry_id}", json={"confidence": 5}
-    )
+    update = client.put(f"/api/skills/{entry_id}", json={"confidence": 5})
     assert update.json()["confidence"] == 5
 
-    delete = client.delete(f"/api/skills/entries/{entry_id}")
+    delete = client.delete(f"/api/skills/{entry_id}")
     assert delete.status_code == 204
-    assert client.get(f"/api/skills/entries/{entry_id}").status_code == 404
+    assert client.get(f"/api/skills/{entry_id}").status_code == 404

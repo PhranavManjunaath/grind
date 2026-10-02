@@ -10,7 +10,7 @@ from ..models import FoodEntry, SavedFood
 router = APIRouter(prefix="/api/food", tags=["food"])
 
 
-@router.post("/entries", response_model=schemas.FoodEntryRead, status_code=201)
+@router.post("", response_model=schemas.FoodEntryRead, status_code=201)
 def create_entry(
     payload: schemas.FoodEntryCreate, db: Session = Depends(get_session)
 ) -> FoodEntry:
@@ -39,7 +39,7 @@ def create_entry(
     return entry
 
 
-@router.get("/entries", response_model=schemas.FoodEntryPage)
+@router.get("", response_model=schemas.FoodEntryPage)
 def list_entries(
     start: date_type | None = Query(default=None),
     end: date_type | None = Query(default=None),
@@ -63,40 +63,7 @@ def list_entries(
     return schemas.FoodEntryPage(total=total, limit=limit, offset=offset, items=items)
 
 
-@router.get("/entries/{entry_id}", response_model=schemas.FoodEntryRead)
-def get_entry(entry_id: int, db: Session = Depends(get_session)) -> FoodEntry:
-    entry = db.get(FoodEntry, entry_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Food entry not found")
-    return entry
-
-
-@router.patch("/entries/{entry_id}", response_model=schemas.FoodEntryRead)
-def update_entry(
-    entry_id: int, payload: schemas.FoodEntryUpdate, db: Session = Depends(get_session)
-) -> FoodEntry:
-    entry = db.get(FoodEntry, entry_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Food entry not found")
-    updates = payload.model_dump(exclude_unset=True)
-    for key, value in updates.items():
-        setattr(entry, key, value)
-    db.add(entry)
-    db.commit()
-    db.refresh(entry)
-    return entry
-
-
-@router.delete("/entries/{entry_id}", status_code=204)
-def delete_entry(entry_id: int, db: Session = Depends(get_session)) -> None:
-    entry = db.get(FoodEntry, entry_id)
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Food entry not found")
-    db.delete(entry)
-    db.commit()
-
-
-@router.get("/entries/daily-totals/list", response_model=list[schemas.DailyFoodTotal])
+@router.get("/daily-totals", response_model=list[schemas.DailyFoodTotal])
 def daily_totals_endpoint(
     start: date_type | None = Query(default=None),
     end: date_type | None = Query(default=None),
@@ -114,6 +81,10 @@ def daily_totals_endpoint(
 
 
 # ---------- Saved foods ----------
+# Registered before the "/{entry_id}" routes below: FastAPI matches routes
+# in registration order, and "/saved..." would otherwise be swallowed by
+# "/{entry_id}" (which 422s trying to parse "saved" as an int) if it came
+# first.
 
 
 @router.post("/saved", response_model=schemas.SavedFoodRead, status_code=201)
@@ -132,7 +103,7 @@ def list_saved_foods(db: Session = Depends(get_session)) -> list[SavedFood]:
     return db.exec(select(SavedFood).order_by(SavedFood.name)).all()
 
 
-@router.patch("/saved/{saved_id}", response_model=schemas.SavedFoodRead)
+@router.put("/saved/{saved_id}", response_model=schemas.SavedFoodRead)
 def update_saved_food(
     saved_id: int, payload: schemas.SavedFoodUpdate, db: Session = Depends(get_session)
 ) -> SavedFood:
@@ -154,4 +125,41 @@ def delete_saved_food(saved_id: int, db: Session = Depends(get_session)) -> None
     if saved is None:
         raise HTTPException(status_code=404, detail="Saved food not found")
     db.delete(saved)
+    db.commit()
+
+
+# ---------- Single entry (generic path param — must stay below the
+# more specific routes above) ----------
+
+
+@router.get("/{entry_id}", response_model=schemas.FoodEntryRead)
+def get_entry(entry_id: int, db: Session = Depends(get_session)) -> FoodEntry:
+    entry = db.get(FoodEntry, entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Food entry not found")
+    return entry
+
+
+@router.put("/{entry_id}", response_model=schemas.FoodEntryRead)
+def update_entry(
+    entry_id: int, payload: schemas.FoodEntryUpdate, db: Session = Depends(get_session)
+) -> FoodEntry:
+    entry = db.get(FoodEntry, entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Food entry not found")
+    updates = payload.model_dump(exclude_unset=True)
+    for key, value in updates.items():
+        setattr(entry, key, value)
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+@router.delete("/{entry_id}", status_code=204)
+def delete_entry(entry_id: int, db: Session = Depends(get_session)) -> None:
+    entry = db.get(FoodEntry, entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Food entry not found")
+    db.delete(entry)
     db.commit()

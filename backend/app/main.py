@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .database import init_db
 from .routers import analytics, food, skills, workouts
+from .routers import settings as settings_router
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ app.include_router(workouts.router)
 app.include_router(food.router)
 app.include_router(skills.router)
 app.include_router(analytics.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/api/health")

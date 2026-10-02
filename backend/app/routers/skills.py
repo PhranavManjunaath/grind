@@ -1,5 +1,3 @@
-from datetime import date as date_type
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
@@ -10,7 +8,7 @@ from ..models import SkillEntry
 router = APIRouter(prefix="/api/skills", tags=["skills"])
 
 
-@router.post("/entries", response_model=schemas.SkillEntryRead, status_code=201)
+@router.post("", response_model=schemas.SkillEntryRead, status_code=201)
 def create_entry(
     payload: schemas.SkillEntryCreate, db: Session = Depends(get_session)
 ) -> SkillEntry:
@@ -21,31 +19,28 @@ def create_entry(
     return entry
 
 
-@router.get("/entries", response_model=schemas.SkillEntryPage)
+@router.get("", response_model=schemas.SkillEntryPage)
 def list_entries(
-    start: date_type | None = Query(default=None),
-    end: date_type | None = Query(default=None),
+    week_number: int | None = Query(default=None, ge=1),
     skill_name: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_session),
 ) -> schemas.SkillEntryPage:
     query = select(SkillEntry)
-    if start is not None:
-        query = query.where(SkillEntry.date >= start)
-    if end is not None:
-        query = query.where(SkillEntry.date <= end)
+    if week_number is not None:
+        query = query.where(SkillEntry.week_number == week_number)
     if skill_name is not None:
         query = query.where(SkillEntry.skill_name == skill_name)
 
     total = len(db.exec(query).all())
     items = db.exec(
-        query.order_by(SkillEntry.date.desc()).offset(offset).limit(limit)
+        query.order_by(SkillEntry.week_number.desc()).offset(offset).limit(limit)
     ).all()
     return schemas.SkillEntryPage(total=total, limit=limit, offset=offset, items=items)
 
 
-@router.get("/entries/{entry_id}", response_model=schemas.SkillEntryRead)
+@router.get("/{entry_id}", response_model=schemas.SkillEntryRead)
 def get_entry(entry_id: int, db: Session = Depends(get_session)) -> SkillEntry:
     entry = db.get(SkillEntry, entry_id)
     if entry is None:
@@ -53,7 +48,7 @@ def get_entry(entry_id: int, db: Session = Depends(get_session)) -> SkillEntry:
     return entry
 
 
-@router.patch("/entries/{entry_id}", response_model=schemas.SkillEntryRead)
+@router.put("/{entry_id}", response_model=schemas.SkillEntryRead)
 def update_entry(
     entry_id: int, payload: schemas.SkillEntryUpdate, db: Session = Depends(get_session)
 ) -> SkillEntry:
@@ -69,7 +64,7 @@ def update_entry(
     return entry
 
 
-@router.delete("/entries/{entry_id}", status_code=204)
+@router.delete("/{entry_id}", status_code=204)
 def delete_entry(entry_id: int, db: Session = Depends(get_session)) -> None:
     entry = db.get(SkillEntry, entry_id)
     if entry is None:
